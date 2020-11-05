@@ -44,6 +44,10 @@ class CpuImpl : public Cpu
         bool evaluateCondition(Condition c);
         u16 fetchImmedate16();
         u8 fetchImmedate8();
+        u8 popFromStack();
+        void pushIntoStack(u8 value);
+        u16 popFromStack16();
+        void pushIntoStack16(u16 value);
 
         // Instructions
         void nop();

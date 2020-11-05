@@ -118,7 +118,7 @@ void CpuImpl::executeFirstGroupInstruction(u8 y, u8 z, u8 p, u8 q)
         u8 immedate = fetchImmedate8();
         mvi(reg, immedate);
     }
-    else // z == 7
+    else
     {
         if (y == 0)
             rlc();
@@ -398,6 +398,32 @@ u8 CpuImpl::fetchImmedate8()
     return immedate;
 }
 
+u8 CpuImpl::popFromStack()
+{
+    auto& sp = registers.getSp();
+    return bus->readFromMemory(sp++);
+}
+
+void CpuImpl::pushIntoStack(u8 value)
+{
+    auto& sp = registers.getSp();
+    bus->writeIntoMemory(--sp, value);
+}
+
+u16 CpuImpl::popFromStack16()
+{
+    u8 low = popFromStack();
+    u8 high = popFromStack();
+    u16 result = low & (high << 8);
+    return result;
+}
+
+void CpuImpl::pushIntoStack16(u16 value)
+{
+    pushIntoStack(value & 0xFF);
+    pushIntoStack((value >> 8) & 0xFF);
+}
+
 void CpuImpl::nop()
 {
     // NOP - No Operation
@@ -482,13 +508,23 @@ void CpuImpl::dcx(u16& reg)
 void CpuImpl::inr(u8& reg)
 {
     // INR - Increment
+    auto& flags = registers.getAf().getLow();
+    flags.AC = (reg & 0xF) == 0xF;
     reg++;
+    flags.Z = reg == 0;
+    flags.S = (reg >> 15) & 0x1;
+    flags.P = !(reg % 2);
 }
 
 void CpuImpl::dcr(u8& reg)
 {
     // DCR - Decrement
+    auto& flags = registers.getAf().getLow();
+    flags.AC = (reg & 0xF) == 0x0;
     reg--;
+    flags.Z = reg == 0;
+    flags.S = (reg >> 15) & 0x1;
+    flags.P = !(reg % 2);
 }
 
 void CpuImpl::mvi(u8& reg, u8 immedate)
@@ -500,55 +536,57 @@ void CpuImpl::mvi(u8& reg, u8 immedate)
 void CpuImpl::rlc()
 {
     // RLC - Rotate Left with Carry
-
+    // TODO: Implement instruction
 }
 
 void CpuImpl::rrc()
 {
     // RRC - Rotate Right with Carry
-
+    // TODO: Implement instruction
 }
 
 void CpuImpl::ral()
 {
     // RAL - Rotate Accumulator Left
-
+    // TODO: Implement instruction
 }
 
 void CpuImpl::rar()
 {
     // RAR - Rotate Accumulator Right
-
+    // TODO: Implement instruction
 }
 
 void CpuImpl::daa()
 {
     // DAA - Decimal Adjust Accumulator
-
+    // TODO: Implement instruction
 }
 
 void CpuImpl::cma()
 {
     // CMA - Complement Accumulator
-
+    // TODO: Implement instruction
 }
 
 void CpuImpl::stc()
 {
     // STC - Set Carry
-
+    auto& flags = registers.getAf().getLow();
+    flags.C = 1;
 }
 
 void CpuImpl::cmc()
 {
     // CMC - Complement Carry
-
+    auto& flags = registers.getAf().getLow();
+    flags.C ^= 1;
 }
 
 void CpuImpl::mov(u8& destination, u8& source)
 {
     // MOV - Move register
-
+    destination = source;
 }
 
 void CpuImpl::halt()
@@ -560,197 +598,221 @@ void CpuImpl::halt()
 void CpuImpl::add(u8& src)
 {
     // ADD - Add to accumulator
-
+    // TODO: Implement instruction
 }
 
 void CpuImpl::adc(u8& src)
 {
     // ADC - Add with Carry
-
+    // TODO: Implement instruction
 }
 
 void CpuImpl::sub(u8& src)
 {
     // SUB - Subtract from accumulator
-
+    // TODO: Implement instruction
 }
 
 void CpuImpl::sbc(u8& src)
 {
     // SBC - Subtract with Carry
-
+    // TODO: Implement instruction
 }
 
 void CpuImpl::ana(u8& src)
 {
     // ANA - And Accumulator
-
+    // TODO: Implement instruction
 }
 
 void CpuImpl::xra(u8& src)
 {
     // XRA - Xor Accumulator
-
+    // TODO: Implement instruction
 }
 
 void CpuImpl::ora(u8& src)
 {
     // ORA - Or Accumulator
-
+    // TODO: Implement instruction
 }
 
 void CpuImpl::cmp(u8& src)
 {
     // CMP - Compare with accumulator
-
+    // TODO: Implement instruction
 }
 
 void CpuImpl::ret(Condition c)
 {
-    // R cc[y] - Conditional Return
-
+    // R[cc] - Conditional Return
+    // TODO: Implement instruction
 }
 
 void CpuImpl::ret()
 {
     // RET - Return
-
+    // TODO: Implement instruction
 }
 
 void CpuImpl::pop(u16& reg)
 {
     // POP - Pop from stack
-
+    reg = popFromStack16();
 }
 
 void CpuImpl::push(u16& reg)
 {
     // PUSH - Push into stack
-
+    pushIntoStack16(reg);
 }
 
 void CpuImpl::pchl()
 {
     // PCHL - Load PC from HL
-
+    auto& hl = registers.getHl().getRaw();
+    auto& pc = registers.getPc();
+    pc = hl;
 }
 
 void CpuImpl::sphl()
 {
     // SPHL - Load SP from HL
-
+    auto& hl = registers.getHl().getRaw();
+    auto& sp = registers.getSp();
+    sp = hl;
 }
 
 void CpuImpl::jmp(Condition c, u16 addr)
 {
-    // J cc[y] - Conditional Jump
-
+    // J[cc] - Conditional Jump
+    bool shouldJump = evaluateCondition(c);
+    if (shouldJump)
+    {
+        auto& pc = registers.getPc();
+        pc = addr;
+    }
 }
 
 void CpuImpl::jmp(u16 addr)
 {
     // JMP - Jump
-
+    auto& pc = registers.getPc();
+    pc = addr;
 }
 
 void CpuImpl::out(u8 port)
 {
     // OUT - Write to output port
-
+    auto& a = registers.getAf().getHigh();
+    bus->writeIntoOutputPort(port, a);
 }
 
 void CpuImpl::in(u8 port)
 {
     // IN - Read from input port
-
+    auto& a = registers.getAf().getHigh();
+    a = bus->readFromInputPort(port);
 }
 
 void CpuImpl::ei()
 {
     // EI - Enable Interrupts
-
+    interrupt_enable = true;
 }
 
 void CpuImpl::di()
 {
     // DI - Disable Interrupts
-
+    interrupt_enable = false;
 }
 
 void CpuImpl::xthl()
 {
     // XTHL - Exchange HL with memory contents pointed by SP
-
+    auto& hl = registers.getHl();
+    auto& sp = registers.getSp();
+    auto memLow = bus->readFromMemory(sp);
+    auto memHigh = bus->readFromMemory(sp + 1);
+    u16 memValue = memLow & (memHigh << 8);
+    bus->writeIntoMemory(sp, hl.getLow());
+    bus->writeIntoMemory(sp + 1, hl.getHigh());
+    hl = memValue;
 }
 
 void CpuImpl::xchg()
 {
     // XCHG - Exchange HL with contents of DE
-
+    auto& hl = registers.getHl().getRaw();
+    auto& de = registers.getDe().getRaw();
+    auto hlTemp = hl;
+    hl = de;
+    de = hlTemp;
 }
 
 void CpuImpl::call(Condition c, u16 addr)
 {
-    // C cc[y] - Conditional Call
-
+    // C[cc] - Conditional Call
+    // TODO: Implement instruction
 }
 
 void CpuImpl::call(u16 addr)
 {
     // CALL - Call
-
+    // TODO: Implement instruction
 }
 
 void CpuImpl::adi(u8 immedate)
 {
     // ADI - Add Immedate
-
+    // TODO: Implement instruction
 }
 
 void CpuImpl::aci(u8 immedate)
 {
     // ACI - Add Immedate with Carry
-
+    // TODO: Implement instruction
 }
 
 void CpuImpl::sui(u8 immedate)
 {
     // SUI - Subtract Immedate
-
+    // TODO: Implement instruction
 }
 
 void CpuImpl::sbi(u8 immedate)
 {
     // SBI - Subtract Immedate with Borrow
-
+    // TODO: Implement instruction
 }
 
 void CpuImpl::ani(u8 immedate)
 {
     // ANI - And Immedate
-
+    // TODO: Implement instruction
 }
 
 void CpuImpl::xri(u8 immedate)
 {
     // XRI - Xor Immedate
-
+    // TODO: Implement instruction
 }
 
 void CpuImpl::ori(u8 immedate)
 {
     // ORI - Or Immedate
-
+    // TODO: Implement instruction
 }
 
 void CpuImpl::cpi(u8 immedate)
 {
     // CPI - Compare Immedate
-
+    // TODO: Implement instruction
 }
 
 void CpuImpl::rst(u8 vector)
 {
     // RST - Reset (jump to reset vector)
-
+    auto& pc = registers.getPc();
+    pc = vector;
 }
