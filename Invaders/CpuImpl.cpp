@@ -6,6 +6,8 @@ CpuImpl::CpuImpl(const std::shared_ptr<Bus>& busPtr)
     , interrupt_enable(false)
     , halted(false)
 {
+    auto& rawFlags = registers.getAf().getLow().raw;
+    rawFlags = 0x2; // Set bit between Carry and Parity to 1
 }
 
 u8 CpuImpl::fetchOpcode()
@@ -166,7 +168,7 @@ void CpuImpl::executeThirdGroupInstruction(u8 y, u8 z)
     else if (y == 2)
         sub(reg);
     else if (y == 3)
-        sbc(reg);
+        sbb(reg);
     else if (y == 4)
         ana(reg);
     else if (y == 5)
@@ -386,7 +388,7 @@ u16 CpuImpl::fetchImmedate16()
     u8 lsb = fetchImmedate8();
     u8 msb = fetchImmedate8();
 
-    u16 immedate = lsb & (msb << 8);
+    u16 immedate = lsb | (msb << 8);
     return immedate;
 }
 
@@ -414,7 +416,7 @@ u16 CpuImpl::popFromStack16()
 {
     u8 low = popFromStack();
     u8 high = popFromStack();
-    u16 result = low & (high << 8);
+    u16 result = low | (high << 8);
     return result;
 }
 
@@ -422,6 +424,17 @@ void CpuImpl::pushIntoStack16(u16 value)
 {
     pushIntoStack(value & 0xFF);
     pushIntoStack((value >> 8) & 0xFF);
+}
+
+bool CpuImpl::checkParity(u8 value)
+{
+    auto counter = 0;
+    while (value > 0)
+    {
+        counter += value & 0x1;
+        value >>= 1;
+    }
+    return !(counter % 2);
 }
 
 void CpuImpl::nop()
@@ -513,7 +526,7 @@ void CpuImpl::inr(u8& reg)
     reg++;
     flags.Z = reg == 0;
     flags.S = (reg >> 15) & 0x1;
-    flags.P = !(reg % 2);
+    flags.P = checkParity(reg);
 }
 
 void CpuImpl::dcr(u8& reg)
@@ -524,7 +537,7 @@ void CpuImpl::dcr(u8& reg)
     reg--;
     flags.Z = reg == 0;
     flags.S = (reg >> 15) & 0x1;
-    flags.P = !(reg % 2);
+    flags.P = checkParity(reg);
 }
 
 void CpuImpl::mvi(u8& reg, u8 immedate)
@@ -535,38 +548,71 @@ void CpuImpl::mvi(u8& reg, u8 immedate)
 
 void CpuImpl::rlc()
 {
-    // RLC - Rotate Left with Carry
-    // TODO: Implement instruction
+    // RLC - Rotate Accumulator Left
+    auto& accumulator = registers.getAf().getHigh();
+    auto& flags = registers.getAf().getLow();
+    flags.C = (accumulator >> 7) & 0x1;
+    accumulator = (accumulator << 1) | flags.C;
 }
 
 void CpuImpl::rrc()
 {
-    // RRC - Rotate Right with Carry
-    // TODO: Implement instruction
+    // RRC - Rotate Accumulator Right
+    auto& accumulator = registers.getAf().getHigh();
+    auto& flags = registers.getAf().getLow();
+    flags.C = accumulator & 0x1;
+    accumulator = (accumulator >> 1) | (flags.C << 7);
 }
 
 void CpuImpl::ral()
 {
-    // RAL - Rotate Accumulator Left
-    // TODO: Implement instruction
+    // RAL - Rotate Accumulator Left through Carry
+    auto& accumulator = registers.getAf().getHigh();
+    auto& flags = registers.getAf().getLow();
+    auto oldCarry = flags.C;
+    flags.C = (accumulator >> 7) & 0x1;
+    accumulator = (accumulator << 1) | oldCarry;
 }
 
 void CpuImpl::rar()
 {
-    // RAR - Rotate Accumulator Right
-    // TODO: Implement instruction
+    // RAR - Rotate Accumulator Right through Carry
+    auto& accumulator = registers.getAf().getHigh();
+    auto& flags = registers.getAf().getLow();
+    auto oldCarry = flags.C;
+    flags.C = accumulator & 0x1;
+    accumulator = (accumulator >> 1) | (oldCarry << 7);
 }
 
 void CpuImpl::daa()
 {
     // DAA - Decimal Adjust Accumulator
-    // TODO: Implement instruction
+    auto& accumulator = registers.getAf().getHigh();
+    auto& flags = registers.getAf().getLow();
+    auto oldAuxCarry = flags.AC;
+    flags.AC = 0;
+    if ((accumulator & 0xF) > 0x9 || oldAuxCarry)
+    {
+        flags.AC = (accumulator & 0xF) > 0x9;
+        accumulator += 0x6;
+    }
+    auto oldCarry = flags.C;
+    flags.C = 0;
+    if (((accumulator >> 4) & 0xF) > 0x9 || oldCarry)
+    {
+        flags.C = ((accumulator >> 4) & 0xF) > 0x9;
+        accumulator += (0x6 << 4);
+    }
+    flags.Z = accumulator == 0;
+    flags.S = (accumulator >> 7) & 0x1;
+    flags.P = checkParity(accumulator);
 }
 
 void CpuImpl::cma()
 {
     // CMA - Complement Accumulator
-    // TODO: Implement instruction
+    auto& accumulator = registers.getAf().getHigh();
+    accumulator = ~accumulator;
 }
 
 void CpuImpl::stc()
@@ -580,7 +626,7 @@ void CpuImpl::cmc()
 {
     // CMC - Complement Carry
     auto& flags = registers.getAf().getLow();
-    flags.C ^= 1;
+    flags.C = ~flags.C;
 }
 
 void CpuImpl::mov(u8& destination, u8& source)
@@ -598,61 +644,69 @@ void CpuImpl::halt()
 void CpuImpl::add(u8& src)
 {
     // ADD - Add to accumulator
-    // TODO: Implement instruction
+    adi(src);
 }
 
 void CpuImpl::adc(u8& src)
 {
     // ADC - Add with Carry
-    // TODO: Implement instruction
+    aci(src);
 }
 
 void CpuImpl::sub(u8& src)
 {
     // SUB - Subtract from accumulator
-    // TODO: Implement instruction
+    sui(src);
 }
 
-void CpuImpl::sbc(u8& src)
+void CpuImpl::sbb(u8& src)
 {
-    // SBC - Subtract with Carry
-    // TODO: Implement instruction
+    // SBB - Subtract with Borrow
+    sbi(src);
 }
 
 void CpuImpl::ana(u8& src)
 {
     // ANA - And Accumulator
-    // TODO: Implement instruction
+    ani(src);
 }
 
 void CpuImpl::xra(u8& src)
 {
     // XRA - Xor Accumulator
-    // TODO: Implement instruction
+    xri(src);
 }
 
 void CpuImpl::ora(u8& src)
 {
     // ORA - Or Accumulator
-    // TODO: Implement instruction
+    ori(src);
 }
 
 void CpuImpl::cmp(u8& src)
 {
     // CMP - Compare with accumulator
-    // TODO: Implement instruction
+    cpi(src);
 }
 
 void CpuImpl::ret(Condition c)
 {
     // R[cc] - Conditional Return
-    // TODO: Implement instruction
+    bool shouldReturn = evaluateCondition(c);
+    if (shouldReturn)
+    {
+        auto& pc = registers.getPc();
+        auto addr = popFromStack16();
+        pc = addr;
+    }
 }
 
 void CpuImpl::ret()
 {
     // RET - Return
-    // TODO: Implement instruction
+    auto& pc = registers.getPc();
+    auto addr = popFromStack16();
+    pc = addr;
 }
 
 void CpuImpl::pop(u16& reg)
@@ -734,7 +788,7 @@ void CpuImpl::xthl()
     auto& sp = registers.getSp();
     auto memLow = bus->readFromMemory(sp);
     auto memHigh = bus->readFromMemory(sp + 1);
-    u16 memValue = memLow & (memHigh << 8);
+    u16 memValue = memLow | (memHigh << 8);
     bus->writeIntoMemory(sp, hl.getLow());
     bus->writeIntoMemory(sp + 1, hl.getHigh());
     hl = memValue;
@@ -753,61 +807,134 @@ void CpuImpl::xchg()
 void CpuImpl::call(Condition c, u16 addr)
 {
     // C[cc] - Conditional Call
-    // TODO: Implement instruction
+    bool shouldCall = evaluateCondition(c);
+    if (shouldCall)
+    {
+        auto& pc = registers.getPc();
+        pushIntoStack16(pc);
+        pc = addr;
+    }
 }
 
 void CpuImpl::call(u16 addr)
 {
     // CALL - Call
-    // TODO: Implement instruction
+    auto& pc = registers.getPc();
+    pushIntoStack16(pc);
+    pc = addr;
 }
 
 void CpuImpl::adi(u8 immedate)
 {
     // ADI - Add Immedate
-    // TODO: Implement instruction
+    auto& accumulator = registers.getAf().getHigh();
+    auto& flags = registers.getAf().getLow();
+    flags.AC = (accumulator & 0xF) + (immedate & 0xF) > 0xF;
+    unsigned result = accumulator + immedate;
+    flags.C = (result >> 8) & 0x1;
+    accumulator = result & 0xFF;
+    flags.Z = accumulator == 0;
+    flags.S = (accumulator >> 7) & 0x1;
+    flags.P = checkParity(accumulator);
 }
 
 void CpuImpl::aci(u8 immedate)
 {
     // ACI - Add Immedate with Carry
-    // TODO: Implement instruction
+    auto& accumulator = registers.getAf().getHigh();
+    auto& flags = registers.getAf().getLow();
+    immedate += flags.C;
+    flags.AC = (accumulator & 0xF) + (immedate & 0xF) > 0xF;
+    unsigned result = accumulator + immedate;
+    flags.C = (result >> 8) & 0x1;
+    accumulator = result & 0xFF;
+    flags.Z = accumulator == 0;
+    flags.S = (accumulator >> 7) & 0x1;
+    flags.P = checkParity(accumulator);
 }
 
 void CpuImpl::sui(u8 immedate)
 {
     // SUI - Subtract Immedate
-    // TODO: Implement instruction
+    auto& accumulator = registers.getAf().getHigh();
+    auto& flags = registers.getAf().getLow();
+    u8 negatedImmedate = ~immedate + 1;
+    flags.AC = (accumulator & 0xF) + (negatedImmedate & 0xF) > 0xF;
+    unsigned result = accumulator + negatedImmedate;
+    flags.C = !((result >> 8) & 0x1);
+    accumulator = result & 0xFF;
+    flags.Z = accumulator == 0;
+    flags.S = (accumulator >> 7) & 0x1;
+    flags.P = checkParity(accumulator);
 }
 
 void CpuImpl::sbi(u8 immedate)
 {
     // SBI - Subtract Immedate with Borrow
-    // TODO: Implement instruction
+    auto& accumulator = registers.getAf().getHigh();
+    auto& flags = registers.getAf().getLow();
+    u8 negatedImmedate = ~(immedate + flags.C) + 1;
+    flags.AC = (accumulator & 0xF) + (negatedImmedate & 0xF) > 0xF;
+    unsigned result = accumulator + negatedImmedate;
+    flags.C = !((result >> 8) & 0x1);
+    accumulator = result & 0xFF;
+    flags.Z = accumulator == 0;
+    flags.S = (accumulator >> 7) & 0x1;
+    flags.P = checkParity(accumulator);
 }
 
 void CpuImpl::ani(u8 immedate)
 {
     // ANI - And Immedate
-    // TODO: Implement instruction
+    auto& accumulator = registers.getAf().getHigh();
+    auto& flags = registers.getAf().getLow();
+    accumulator &= immedate;
+    flags.AC = 0;
+    flags.C = 0;
+    flags.Z = accumulator == 0;
+    flags.S = (accumulator >> 7) & 0x1;
+    flags.P = checkParity(accumulator);
 }
 
 void CpuImpl::xri(u8 immedate)
 {
     // XRI - Xor Immedate
-    // TODO: Implement instruction
+    auto& accumulator = registers.getAf().getHigh();
+    auto& flags = registers.getAf().getLow();
+    accumulator ^= immedate;
+    flags.AC = 0;
+    flags.C = 0;
+    flags.Z = accumulator == 0;
+    flags.S = (accumulator >> 7) & 0x1;
+    flags.P = checkParity(accumulator);
 }
 
 void CpuImpl::ori(u8 immedate)
 {
     // ORI - Or Immedate
-    // TODO: Implement instruction
+    auto& accumulator = registers.getAf().getHigh();
+    auto& flags = registers.getAf().getLow();
+    accumulator |= immedate;
+    flags.AC = 0;
+    flags.C = 0;
+    flags.Z = accumulator == 0;
+    flags.S = (accumulator >> 7) & 0x1;
+    flags.P = checkParity(accumulator);
 }
 
 void CpuImpl::cpi(u8 immedate)
 {
     // CPI - Compare Immedate
-    // TODO: Implement instruction
+    auto& accumulator = registers.getAf().getHigh();
+    auto& flags = registers.getAf().getLow();
+    u8 negatedImmedate = ~immedate + 1;
+    flags.AC = (accumulator & 0xF) + (negatedImmedate & 0xF) > 0xF;
+    unsigned result = accumulator + negatedImmedate;
+    flags.C = !((result >> 8) & 0x1);
+    result = result & 0xFF;
+    flags.Z = result == 0;
+    flags.S = (result >> 7) & 0x1;
+    flags.P = checkParity(result);
 }
 
 void CpuImpl::rst(u8 vector)
