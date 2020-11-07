@@ -525,7 +525,7 @@ void CpuImpl::inr(u8& reg)
     flags.AC = (reg & 0xF) == 0xF;
     reg++;
     flags.Z = reg == 0;
-    flags.S = (reg >> 15) & 0x1;
+    flags.S = (reg >> 7) & 0x1;
     flags.P = checkParity(reg);
 }
 
@@ -536,7 +536,7 @@ void CpuImpl::dcr(u8& reg)
     flags.AC = (reg & 0xF) == 0x0;
     reg--;
     flags.Z = reg == 0;
-    flags.S = (reg >> 15) & 0x1;
+    flags.S = (reg >> 7) & 0x1;
     flags.P = checkParity(reg);
 }
 
@@ -589,16 +589,12 @@ void CpuImpl::daa()
     // DAA - Decimal Adjust Accumulator
     auto& accumulator = registers.getAf().getHigh();
     auto& flags = registers.getAf().getLow();
-    auto oldAuxCarry = flags.AC;
-    flags.AC = 0;
-    if ((accumulator & 0xF) > 0x9 || oldAuxCarry)
+    if ((accumulator & 0xF) > 0x9 || flags.AC)
     {
         flags.AC = (accumulator & 0xF) > 0x9;
         accumulator += 0x6;
     }
-    auto oldCarry = flags.C;
-    flags.C = 0;
-    if (((accumulator >> 4) & 0xF) > 0x9 || oldCarry)
+    if (((accumulator >> 4) & 0xF) > 0x9 || flags.C)
     {
         flags.C = ((accumulator >> 4) & 0xF) > 0x9;
         accumulator += (0x6 << 4);

@@ -124,6 +124,7 @@
   </ItemDefinitionGroup>
   <ItemGroup>
     <ClInclude Include="Bus.hpp" />
+    <ClInclude Include="Condition.hpp" />
     <ClInclude Include="Cpu.hpp" />
     <ClInclude Include="CpuImpl.hpp" />
     <ClInclude Include="FlagRegister.hpp" />
