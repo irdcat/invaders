@@ -63,7 +63,7 @@ class CpuImpl : public Cpu
         void daa();                         // DAA  - Decimal adjust accumulator
         void cma();                         // CMA  - Complement accumulator
         void stc();                         // STC  - Set carry
-        void cmc();                         // CMA  - Complement carry
+        void cmc();                         // CMC  - Complement carry
         void mov(u8& dest, u8& src);        // MOV  - Move one register value to another    
         void halt();                        // HALT - Halt cpu
         void add(u8& src);                  // ADD  - Add register value to accumulator

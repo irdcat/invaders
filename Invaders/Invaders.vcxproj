@@ -124,6 +124,7 @@
   </ItemDefinitionGroup>
   <ItemGroup>
     <ClInclude Include="Bus.hpp" />
+    <ClInclude Include="BusImpl.hpp" />
     <ClInclude Include="Condition.hpp" />
     <ClInclude Include="Cpu.hpp" />
     <ClInclude Include="CpuImpl.hpp" />
@@ -136,6 +137,7 @@
     <None Include="RegisterPair.inl" />
   </ItemGroup>
   <ItemGroup>
+    <ClCompile Include="BusImpl.cpp" />
     <ClCompile Include="CpuImpl.cpp" />
     <ClCompile Include="Registers.cpp" />
   </ItemGroup>

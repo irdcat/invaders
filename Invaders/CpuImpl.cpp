@@ -14,7 +14,7 @@ u8 CpuImpl::fetchOpcode()
 {
     u16& pc = registers.getPc();
     u8 opcode = bus->readFromMemory(pc);
-    pc += 2;
+    pc += 1;
     return opcode;
 }
 
