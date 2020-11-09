@@ -33,8 +33,8 @@ void CpuImpl::executeInstruction(u8 opcode)
     const auto x = (opcode >> 6) & 3;
     const auto y = (opcode >> 3) & 7;
     const auto z = opcode & 7;
-    const auto p = opcode >> 1;
-    const auto q = opcode % 2;
+    const auto p = y >> 1;
+    const auto q = y % 2;
 
     switch (x)
     {
