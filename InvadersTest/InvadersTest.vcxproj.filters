@@ -12,6 +12,7 @@
     <ClCompile Include="CpuImplTests.cpp">
       <Filter>tests</Filter>
     </ClCompile>
+    <ClCompile Include="test-main.cpp" />
   </ItemGroup>
   <ItemGroup>
     <None Include="packages.config" />

@@ -40,12 +40,16 @@ void CpuImpl::executeInstruction(u8 opcode)
     {
         case 0:
             executeFirstGroupInstruction(y, z, p, q);
+            break;
         case 1:
             executeSecondGroupInstruction(y, z);
+            break;
         case 2:
             executeThirdGroupInstruction(y, z);
+            break;
         default:
             executeFourthGroupInstruction(y, z, p, q);
+            break;
     }
 }
 

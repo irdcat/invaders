@@ -352,6 +352,6 @@ TEST_F(SingleRegisterInstructionsTests, testDecrementA)
     EXPECT_EQ(0xEF, a);
     EXPECT_EQ(1, flags.AC);
     EXPECT_EQ(0, flags.Z);
-    EXPECT_EQ(0, flags.S);
+    EXPECT_EQ(1, flags.S);
     EXPECT_EQ(0, flags.P);
 }

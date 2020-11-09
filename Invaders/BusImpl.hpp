@@ -16,4 +16,7 @@ class BusImpl : public Bus
         void writeIntoOutputPort(u8 port, u8 value) override;
 
         u8& getMemoryLocationRef(u16 addr) override;
+
+    private:
+        u8 temp;
 };

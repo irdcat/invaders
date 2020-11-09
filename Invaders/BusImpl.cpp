@@ -20,5 +20,5 @@ void BusImpl::writeIntoOutputPort(u8 port, u8 value)
 
 u8& BusImpl::getMemoryLocationRef(u16 addr)
 {
-    // TODO: tu wstawiæ instrukcjê return
+    return temp;
 }
