@@ -13,6 +13,18 @@
       <Filter>tests</Filter>
     </ClCompile>
     <ClCompile Include="test-main.cpp" />
+    <ClCompile Include="InterruptInstructionsTests.cpp">
+      <Filter>tests</Filter>
+    </ClCompile>
+    <ClCompile Include="InputOutputInstructionsTests.cpp">
+      <Filter>tests</Filter>
+    </ClCompile>
+    <ClCompile Include="IndirectAddressingInstructionsTests.cpp">
+      <Filter>tests</Filter>
+    </ClCompile>
+    <ClCompile Include="JumpInstructionsTests.cpp">
+      <Filter>tests</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <None Include="packages.config" />

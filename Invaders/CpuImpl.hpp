@@ -17,9 +17,18 @@ class CpuImpl : public Cpu
 
         Registers& getRegisters() override;
 
+        bool isHalted() override;
+
+        bool interruptsEnabled() override;
+
         void executeInstruction(u8 opcode) override;
 
     private:
+        bool interrupt_enable;
+        bool halted;
+        Registers registers;
+        std::shared_ptr<Bus> bus;
+
         void executeFirstGroupInstruction(u8 y, u8 z, u8 p, u8 q);
         void executeSecondGroupInstruction(u8 y, u8 z);
         void executeThirdGroupInstruction(u8 y, u8 z);
@@ -99,9 +108,4 @@ class CpuImpl : public Cpu
         void ori(u8 immedate);              // ORI  - Logical OR accumulator with immedate
         void cpi(u8 immedate);              // CPI  - Compare accumulator with immedate
         void rst(u8 vector);                // RST  - Jump to reset vector
-            
-        bool interrupt_enable;
-        bool halted;
-        Registers registers;
-        std::shared_ptr<Bus> bus;
 };

@@ -46,6 +46,10 @@
   <ItemGroup>
     <ClCompile Include="CarryBitInstructionsTests.cpp" />
     <ClCompile Include="CpuImplTests.cpp" />
+    <ClCompile Include="IndirectAddressingInstructionsTests.cpp" />
+    <ClCompile Include="InputOutputInstructionsTests.cpp" />
+    <ClCompile Include="InterruptInstructionsTests.cpp" />
+    <ClCompile Include="JumpInstructionsTests.cpp" />
     <ClCompile Include="SingleRegisterInstructionsTests.cpp" />
     <ClCompile Include="test-main.cpp" />
   </ItemGroup>

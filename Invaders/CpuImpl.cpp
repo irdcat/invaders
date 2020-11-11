@@ -23,6 +23,16 @@ Registers& CpuImpl::getRegisters()
     return registers;
 }
 
+bool CpuImpl::isHalted()
+{
+    return halted;
+}
+
+bool CpuImpl::interruptsEnabled()
+{
+    return interrupt_enable;
+}
+
 void CpuImpl::executeInstruction(u8 opcode)
 {
     // Extracting bitfields from opcode in following format
@@ -400,7 +410,7 @@ u8 CpuImpl::fetchImmedate8()
 {
     auto& pc = registers.getPc();
     u8 immedate = bus->readFromMemory(pc);
-    pc += 2;
+    pc++;
     return immedate;
 }
 
